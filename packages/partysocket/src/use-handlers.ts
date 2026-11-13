@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import type WebSocket from "./ws";
+import type { WebSocketEventMap } from "./ws";
 
 export type EventHandlerOptions = {
   onOpen?: (event: WebSocketEventMap["open"]) => void;
