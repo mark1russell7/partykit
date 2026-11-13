@@ -105,3 +105,25 @@ testDone("pass WebSocket via options", (done) => {
     done();
   });
 });
+
+test("close listeners get the empty reason and the wasClean of the close event", async () => {
+  const ws = new ReconnectingWebSocket(URL, undefined, {
+    WebSocket: NodeWebSocket,
+    maxRetries: 0
+  });
+  // closes the connection without a close frame: code 1006, reason ""
+  wss.once("connection", (client: NodeWebSocket) => {
+    client.terminate();
+  });
+  const event = await new Promise<{
+    code: number;
+    reason: string;
+    wasClean: boolean;
+  }>((resolve) => {
+    ws.addEventListener("close", (e) => resolve(e), { once: true });
+  });
+  expect(event.code).toBe(1006);
+  expect(event.reason).toBe("");
+  expect(event.wasClean).toBe(false);
+  ws.close();
+});

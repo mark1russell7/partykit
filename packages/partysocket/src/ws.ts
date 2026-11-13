@@ -76,11 +76,14 @@ function cloneEventNode(e: Event) {
   if ("code" in e || "reason" in e) {
     const evt = new CloseEvent(
       // @ts-expect-error we need to fix event/listener types
-      (e.code || 1999) as number,
+      (e.code ?? 1999) as number,
       // @ts-expect-error we need to fix event/listener types
-      (e.reason || "unknown reason") as string,
+      (e.reason ?? "unknown reason") as string,
       e
     );
+    if ("wasClean" in e) {
+      evt.wasClean = e.wasClean as boolean;
+    }
     return evt;
   }
 
