@@ -172,6 +172,9 @@ export function useStableSocket<
     // if enabled just changed from false to true...
     if (!prevEnabledRef.current && enabled) {
       prevEnabledRef.current = enabled;
+      // the socket is now started, so the next options change replaces it
+      // (when the hook mounted with enabled: false, the ref was still null)
+      socketInitializedRef.current = socket;
       const needsNewSocket =
         optionsChanged || optionsChangedWhileDisabledRef.current;
       optionsChangedWhileDisabledRef.current = false;

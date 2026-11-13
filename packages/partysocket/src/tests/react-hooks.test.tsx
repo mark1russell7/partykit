@@ -863,6 +863,40 @@ describe.skipIf(!!process.env.GITHUB_ACTIONS)("usePartySocket", () => {
     });
   });
 
+  test(
+    "the first options change after enabling a socket mounted with enabled: false makes a new socket",
+    { timeout: 15000 },
+    async () => {
+      const { result, rerender } = renderHook(
+        ({ enabled, room }: { enabled: boolean; room: string }) =>
+          usePartySocket({
+            host: `localhost:${PORT}`,
+            room,
+            enabled,
+            ...FAST_RECONNECT
+          }),
+        { initialProps: { enabled: false, room: "room-a" } }
+      );
+      const firstSocket = result.current;
+
+      rerender({ enabled: true, room: "room-a" });
+      expect(result.current).toBe(firstSocket);
+
+      rerender({ enabled: true, room: "room-b" });
+
+      await waitFor(
+        () => {
+          expect(result.current).not.toBe(firstSocket);
+          expect(result.current.room).toBe("room-b");
+          expect(result.current.readyState).toBe(WebSocket.OPEN);
+        },
+        { timeout: 5000 }
+      );
+
+      result.current.close();
+    }
+  );
+
   test("closes socket on unmount after enabled toggle", () => {
     // Bug: the useEffect in useStableSocket returns no cleanup function
     // on the enabled toggle paths (both false→true and true→false).
