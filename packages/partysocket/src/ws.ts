@@ -599,16 +599,29 @@ const partysocket = new PartySocket({
       return;
     }
     this._removeListeners();
+    let closeError: unknown;
     try {
       if (
         this._ws.readyState === this.OPEN ||
         this._ws.readyState === this.CONNECTING
       ) {
-        this._ws.close(code, reason);
+        try {
+          this._ws.close(code, reason);
+        } catch (error) {
+          // WebSocket.close() rejected the code or the reason (for example
+          // a code that is not 1000 or 3000-4999). Close the socket without
+          // them, so it is not left open with its listeners removed, and
+          // throw the error to the caller below.
+          closeError = error;
+          this._ws.close();
+        }
       }
       this._handleClose(new Events.CloseEvent(code, reason, this));
     } catch (_error) {
       // ignore
+    }
+    if (closeError) {
+      throw closeError;
     }
   }
 

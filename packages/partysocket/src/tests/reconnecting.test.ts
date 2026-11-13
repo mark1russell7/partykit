@@ -1137,6 +1137,34 @@ testDone(
   }
 );
 
+testDone(
+  "close() with a code that WebSocket.close() rejects still closes the socket, and throws",
+  (done, fail) => {
+    const ws = new ReconnectingWebSocket(URL);
+    let closeEvents = 0;
+    ws.addEventListener("close", () => {
+      closeEvents++;
+    });
+
+    ws.addEventListener("open", () => {
+      // @ts-expect-error accessing private field
+      const inner: WebSocket = ws._ws;
+      try {
+        // WebSocket.close() accepts only the codes 1000 and 3000-4999
+        expect(() => ws.close(1001, "going away")).toThrow();
+        expect(closeEvents).toBe(1);
+        expect(ws.readyState).toBe(ws.CLOSED);
+        // the inner socket must not stay open with its listeners removed
+        expect(inner.readyState).not.toBe(inner.OPEN);
+      } catch (e) {
+        fail(e);
+        return;
+      }
+      done();
+    });
+  }
+);
+
 test("close() while still CONNECTING dispatches its close event synchronously", async () => {
   // a raw TCP server that accepts connections but never answers the
   // WebSocket upgrade — the client socket stays in CONNECTING
