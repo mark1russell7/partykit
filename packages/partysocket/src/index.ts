@@ -27,7 +27,7 @@ export type PartySocketOptions = Omit<RWS.Options, "constructor"> & {
 
 export type PartyFetchOptions = {
   host: string; // base url for the party
-  room: string; // the room to connect to
+  room?: string; // the room to connect to
   party?: string; // the party to fetch from (defaults to main)
   basePath?: string; // the base path to use for the party
   prefix?: string; // the prefix to use for the party
@@ -35,7 +35,7 @@ export type PartyFetchOptions = {
   protocol?: "http" | "https";
   query?: Params | (() => Params | Promise<Params>);
   fetch?: typeof fetch;
-};
+} & ({ room: string } | { basePath: string }); // a room or a basePath is required
 
 function generateUUID(): string {
   // Public Domain/MIT

@@ -102,6 +102,26 @@ describe.skipIf(!!process.env.GITHUB_ACTIONS)("PartySocket.fetch", () => {
     expect(calledUrl).toContain("/custom/base");
   });
 
+  test("uses basePath without a room", async () => {
+    const mockFetch = vitest.fn().mockResolvedValue(new Response("ok"));
+
+    await PartySocket.fetch({
+      host: "example.com",
+      basePath: "custom/base",
+      fetch: mockFetch
+    });
+
+    const calledUrl = mockFetch.mock.calls[0][0];
+    expect(calledUrl).toBe("https://example.com/custom/base?");
+
+    // a room or a basePath is still required
+    // @ts-expect-error - neither a room nor a basePath
+    const noTarget: Parameters<typeof PartySocket.fetch>[0] = {
+      host: "example.com"
+    };
+    void noTarget;
+  });
+
   test("uses prefix when provided", async () => {
     const mockFetch = vitest.fn().mockResolvedValue(new Response("ok"));
 
