@@ -955,6 +955,36 @@ testDone(
   }
 );
 
+testDone(
+  "reconnect() on an open socket connects again when shouldReconnectOnClose returns false for its close event",
+  (done, fail) => {
+    const ws = new ReconnectingWebSocket(URL, undefined, {
+      minReconnectionDelay: 50,
+      maxReconnectionDelay: 100,
+      // no automatic reconnect after a normal closure
+      shouldReconnectOnClose: (event) => event.code !== 1000
+    });
+
+    const timeout = setTimeout(() => {
+      ws.close();
+      fail(new Error("reconnect() did not connect again"));
+    }, 2000);
+
+    let opens = 0;
+    ws.addEventListener("open", () => {
+      opens++;
+      if (opens === 1) {
+        // closes with the code 1000, then connects again
+        ws.reconnect();
+        return;
+      }
+      clearTimeout(timeout);
+      ws.close();
+      done();
+    });
+  }
+);
+
 testDone("reconnection delay grow factor", (done) => {
   const ws = new ReconnectingWebSocket(ERROR_URL, [], {
     minReconnectionDelay: 50,

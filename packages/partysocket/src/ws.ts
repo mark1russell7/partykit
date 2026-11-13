@@ -377,6 +377,12 @@ export default class ReconnectingWebSocket extends (EventTarget as TypedEventTar
       this._connect();
     } else {
       this._disconnect(code, reason);
+      // shouldReconnectOnClose is for automatic reconnects. If it returned
+      // false for the close event of this reconnect() itself, connect anyway
+      // (unless a close listener called close()).
+      if (!this._closeCalled) {
+        this._shouldReconnect = true;
+      }
       this._connect();
     }
   }
