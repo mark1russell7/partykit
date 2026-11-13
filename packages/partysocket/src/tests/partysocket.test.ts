@@ -22,3 +22,20 @@ test("if the room is correctly updated after calling updateProperties", () => {
 
   expect(partySocket.room).toBe("second-room");
 });
+
+test("updateProperties() keeps the earlier updates and the id", () => {
+  const partySocket = new PartySocket({
+    host: URL,
+    room: "first-room",
+    startClosed: true
+  });
+  const id = partySocket.id;
+  partySocket.updateProperties({ party: "chat" });
+  partySocket.updateProperties({ room: "second-room" });
+
+  expect(partySocket.name).toBe("chat");
+  expect(partySocket.roomUrl).toBe(
+    "ws://localhost:50121/parties/chat/second-room"
+  );
+  expect(partySocket.id).toBe(id);
+});

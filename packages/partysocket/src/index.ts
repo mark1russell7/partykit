@@ -143,12 +143,15 @@ export default class PartySocket extends ReconnectingWebSocket {
   host!: string;
   path!: string;
   basePath?: string;
+  // the constructor options with all updateProperties() calls merged in
+  private _currentOptions!: PartySocketOptions;
 
   constructor(readonly partySocketOptions: PartySocketOptions) {
     const wsOptions = getWSOptions(partySocketOptions);
 
     super(wsOptions.urlProvider, wsOptions.protocols, wsOptions.socketOptions);
 
+    this._currentOptions = partySocketOptions;
     this.setWSProperties(wsOptions);
 
     if (!partySocketOptions.startClosed && !this.room && !this.basePath) {
@@ -173,14 +176,20 @@ export default class PartySocket extends ReconnectingWebSocket {
   }
 
   public updateProperties(partySocketOptions: Partial<PartySocketOptions>) {
-    const wsOptions = getWSOptions({
-      ...this.partySocketOptions,
+    // merge with the earlier updates (not only with the constructor
+    // options), so that a second call does not undo the first one
+    const options: PartySocketOptions = {
+      ...this._currentOptions,
       ...partySocketOptions,
+      // keep the id; without it, getWSOptions makes a new random id
+      id: partySocketOptions.id ?? this._pk,
       host: partySocketOptions.host ?? this.host,
       room: partySocketOptions.room ?? this.room,
       path: partySocketOptions.path ?? this.path,
       basePath: partySocketOptions.basePath ?? this.basePath
-    });
+    };
+    const wsOptions = getWSOptions(options);
+    this._currentOptions = options;
 
     this._url = wsOptions.urlProvider;
     this._protocols = wsOptions.protocols;
