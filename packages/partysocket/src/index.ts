@@ -104,7 +104,12 @@ function getPartyInfo(
       : // https / wss
         `${defaultProtocol}s`);
 
-  const baseUrl = `${protocol}://${host}/${basePath || `${prefix || "parties"}/${name}/${room}`}${path}`;
+  // "?" and "#" in a party or room name would end the path of the URL
+  // (the rest becomes the query or a fragment), so encode them
+  const encodeName = (value: string | undefined) =>
+    value?.replace(/[?#]/g, (c) => encodeURIComponent(c));
+
+  const baseUrl = `${protocol}://${host}/${basePath || `${prefix || "parties"}/${encodeName(name)}/${encodeName(room)}`}${path}`;
 
   const makeUrl = (query: Params = {}) =>
     `${baseUrl}?${new URLSearchParams([

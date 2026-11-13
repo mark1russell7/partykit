@@ -22,3 +22,21 @@ test("if the room is correctly updated after calling updateProperties", () => {
 
   expect(partySocket.room).toBe("second-room");
 });
+
+test("a room name with ? or # stays in the path of the URL", () => {
+  const partySocket = new PartySocket({
+    host: URL,
+    room: "a?b#c",
+    id: "client-1",
+    startClosed: true
+  });
+
+  expect(partySocket.room).toBe("a?b#c");
+  expect(partySocket.roomUrl).toBe(
+    "ws://localhost:50121/parties/main/a%3Fb%23c"
+  );
+  // @ts-expect-error accessing protected field
+  expect(partySocket._url).toBe(
+    "ws://localhost:50121/parties/main/a%3Fb%23c?_pk=client-1"
+  );
+});
