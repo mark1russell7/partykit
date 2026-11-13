@@ -160,6 +160,7 @@ export default class ReconnectingWebSocket extends (EventTarget as TypedEventTar
   private _retryCount = -1;
   private _uptimeTimeout: ReturnType<typeof setTimeout> | undefined;
   private _connectTimeout: ReturnType<typeof setTimeout> | undefined;
+  private _waitTimeout: ReturnType<typeof setTimeout> | undefined;
   private _shouldReconnect = true;
   private _connectLock = false;
   private _binaryType: BinaryType = "blob";
@@ -341,6 +342,13 @@ export default class ReconnectingWebSocket extends (EventTarget as TypedEventTar
     this._closeCalled = true;
     this._shouldReconnect = false;
     this._clearTimeouts();
+    if (this._waitTimeout !== undefined) {
+      // A reconnection delay is pending. Stop its timer, so it does not keep
+      // the process alive, and release the connect lock that it holds.
+      clearTimeout(this._waitTimeout);
+      this._waitTimeout = undefined;
+      this._connectLock = false;
+    }
     if (!this._ws) {
       this._debug("close enqueued: no ws instance");
       return;
@@ -459,7 +467,10 @@ export default class ReconnectingWebSocket extends (EventTarget as TypedEventTar
 
   private _wait(): Promise<void> {
     return new Promise((resolve) => {
-      setTimeout(resolve, this._getNextDelay());
+      this._waitTimeout = setTimeout(() => {
+        this._waitTimeout = undefined;
+        resolve();
+      }, this._getNextDelay());
     });
   }
 

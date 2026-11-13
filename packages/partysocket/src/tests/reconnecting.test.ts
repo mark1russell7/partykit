@@ -1178,6 +1178,50 @@ test("close() while still CONNECTING dispatches its close event synchronously", 
   }
 });
 
+test("close() during a reconnection delay clears the delay timer", async () => {
+  vitest.useFakeTimers();
+  try {
+    let created = 0;
+    // fails each connection attempt, as an unreachable server does
+    class FailingWebSocket extends EventTarget {
+      readyState = 0;
+      binaryType = "blob";
+      constructor() {
+        super();
+        created++;
+        setTimeout(() => {
+          this.readyState = 3;
+          this.dispatchEvent(new Event("error"));
+        }, 0);
+      }
+      close() {}
+    }
+
+    const ws = new ReconnectingWebSocket(URL, undefined, {
+      WebSocket: FailingWebSocket,
+      minReconnectionDelay: 10000,
+      maxReconnectionDelay: 10000
+    });
+
+    // the first attempt fails, and the next attempt waits 10 s
+    await vitest.advanceTimersByTimeAsync(10);
+    expect(created).toBe(1);
+    expect(vitest.getTimerCount()).toBe(1);
+
+    ws.close();
+    // no timer is left that keeps the process alive
+    expect(vitest.getTimerCount()).toBe(0);
+
+    // reconnect() still connects after close()
+    ws.reconnect();
+    await vitest.advanceTimersByTimeAsync(10);
+    expect(created).toBe(2);
+    ws.close();
+  } finally {
+    vitest.useRealTimers();
+  }
+});
+
 testDone(
   "close() inside a close listener does not dispatch a duplicate close event",
   (done, fail) => {
