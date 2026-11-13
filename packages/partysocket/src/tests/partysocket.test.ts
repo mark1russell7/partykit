@@ -22,3 +22,25 @@ test("if the room is correctly updated after calling updateProperties", () => {
 
   expect(partySocket.room).toBe("second-room");
 });
+
+test("makes an id when there is no global crypto", () => {
+  // as in React Native without a polyfill
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, "crypto");
+  // @ts-expect-error - remove the global for this test
+  delete globalThis.crypto;
+  try {
+    expect(typeof crypto).toBe("undefined");
+    const partySocket = new PartySocket({
+      host: URL,
+      room: "room",
+      startClosed: true
+    });
+    expect(partySocket.id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+    );
+  } finally {
+    if (descriptor) {
+      Object.defineProperty(globalThis, "crypto", descriptor);
+    }
+  }
+});
