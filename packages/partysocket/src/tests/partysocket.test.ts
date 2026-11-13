@@ -22,3 +22,18 @@ test("if the room is correctly updated after calling updateProperties", () => {
 
   expect(partySocket.room).toBe("second-room");
 });
+
+test("updateProperties() keeps the path of a socket made with a path", () => {
+  const partySocket = new PartySocket({
+    host: URL,
+    room: "first-room",
+    path: "sub/path",
+    startClosed: true
+  });
+  partySocket.updateProperties({ room: "second-room" });
+
+  expect(partySocket.path).toBe("/sub/path");
+  expect(partySocket.roomUrl).toBe(
+    "ws://localhost:50121/parties/main/second-room/sub/path"
+  );
+});

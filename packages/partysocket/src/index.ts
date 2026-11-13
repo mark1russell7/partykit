@@ -178,7 +178,9 @@ export default class PartySocket extends ReconnectingWebSocket {
       ...partySocketOptions,
       host: partySocketOptions.host ?? this.host,
       room: partySocketOptions.room ?? this.room,
-      path: partySocketOptions.path ?? this.path,
+      // this.path starts with a slash (getPartyInfo adds it), but the path
+      // option must not start with one
+      path: partySocketOptions.path ?? this.path.replace(/^\//, ""),
       basePath: partySocketOptions.basePath ?? this.basePath
     });
 
