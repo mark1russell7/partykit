@@ -1178,6 +1178,44 @@ test("close() while still CONNECTING dispatches its close event synchronously", 
   }
 });
 
+test("close() before the WebSocket exists dispatches its close event synchronously", async () => {
+  // close() right after the constructor: the WebSocket is made after a
+  // delay tick
+  const ws1 = new ReconnectingWebSocket(URL);
+  let closeEvents1 = 0;
+  ws1.addEventListener("close", () => {
+    closeEvents1++;
+  });
+  expect(ws1.readyState).toBe(ws1.CONNECTING);
+  ws1.close();
+  expect(closeEvents1).toBe(1);
+  expect(ws1.readyState).toBe(ws1.CLOSED);
+  ws1.close();
+  expect(closeEvents1).toBe(1);
+
+  // close() while an async URL provider is pending
+  let resolveUrl!: (url: string) => void;
+  const ws2 = new ReconnectingWebSocket(
+    () =>
+      new Promise<string>((resolve) => {
+        resolveUrl = resolve;
+      })
+  );
+  let closeEvents2 = 0;
+  ws2.addEventListener("close", () => {
+    closeEvents2++;
+  });
+  await new Promise((r) => setTimeout(r, 20));
+  expect(ws2.readyState).toBe(ws2.CONNECTING);
+  ws2.close();
+  expect(closeEvents2).toBe(1);
+  resolveUrl(URL);
+  await new Promise((r) => setTimeout(r, 20));
+  expect(closeEvents2).toBe(1);
+  // @ts-expect-error - accessing private field
+  expect(ws2._ws).toBeUndefined();
+});
+
 testDone(
   "close() inside a close listener does not dispatch a duplicate close event",
   (done, fail) => {

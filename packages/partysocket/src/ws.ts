@@ -338,11 +338,19 @@ export default class ReconnectingWebSocket extends (EventTarget as TypedEventTar
    * listeners were removed and go unobserved entirely.
    */
   public close(code = 1000, reason?: string) {
+    // a connection attempt is in progress, but its WebSocket does not exist
+    // yet (the first delay tick, or an async URL provider is pending)
+    const connectingWithoutWs =
+      !this._ws && this._connectLock && !this._closeCalled;
     this._closeCalled = true;
     this._shouldReconnect = false;
     this._clearTimeouts();
     if (!this._ws) {
       this._debug("close enqueued: no ws instance");
+      if (connectingWithoutWs) {
+        // dispatch the close event, as for a socket that is CONNECTING
+        this._handleClose(new Events.CloseEvent(code, reason, this));
+      }
       return;
     }
     if (
