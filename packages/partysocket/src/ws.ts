@@ -63,6 +63,14 @@ function assert(condition: unknown, msg?: string): asserts condition {
 }
 
 function cloneEventBrowser(e: Event) {
+  // The CloseEvent and ErrorEvent classes of this module take other
+  // constructor arguments than the DOM classes, so clone them here.
+  if (e instanceof CloseEvent) {
+    return new CloseEvent(e.code, e.reason, e);
+  }
+  if (e instanceof ErrorEvent) {
+    return new ErrorEvent(e.error, e);
+  }
   // oxlint-disable-next-line no-explicit-any
   return new (e as any).constructor(e.type, e) as Event;
 }

@@ -297,6 +297,57 @@ testDone("max retries: 0", (done) => maxRetriesTest(0, done));
 testDone("max retries: 1", (done) => maxRetriesTest(1, done));
 testDone("max retries: 5", (done) => maxRetriesTest(5, done));
 
+test("in a browser, the close and error listeners get the code, the reason and the error", async () => {
+  // Load ws.ts again as a browser bundle loads it: without process.versions.node
+  const versions = Object.getOwnPropertyDescriptor(process, "versions")!;
+  vitest.resetModules();
+  Object.defineProperty(process, "versions", {
+    ...versions,
+    value: { ...process.versions, node: undefined }
+  });
+  let BrowserWebSocket: typeof ReconnectingWebSocket;
+  try {
+    BrowserWebSocket = (await import("../ws")).default;
+  } finally {
+    Object.defineProperty(process, "versions", versions);
+  }
+
+  // stays in CONNECTING
+  class PendingWebSocket extends EventTarget {
+    readyState = 0;
+    binaryType = "blob";
+    send() {}
+    close() {
+      this.readyState = 3;
+    }
+  }
+  const ws = new BrowserWebSocket(URL, undefined, {
+    WebSocket: PendingWebSocket
+  });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  let closeEvent: { code: unknown; reason: unknown } | undefined;
+  ws.addEventListener("close", (event) => {
+    closeEvent = event;
+  });
+  ws.close(4000, "bye");
+  expect(closeEvent?.code).toBe(4000);
+  expect(closeEvent?.reason).toBe("bye");
+
+  const failing = new BrowserWebSocket(
+    () => Promise.reject(new Error("no url")),
+    undefined,
+    { maxRetries: 0 }
+  );
+  const errorEvent = await new Promise<ErrorEvent>((resolve) => {
+    failing.addEventListener("error", (event) => resolve(event), {
+      once: true
+    });
+  });
+  expect(errorEvent.message).toBe("no url");
+  expect(errorEvent.error).toBeInstanceOf(Error);
+  failing.close();
+});
+
 testDone("level0 event listeners are kept after reconnect", (done) => {
   const ws = new ReconnectingWebSocket(ERROR_URL, undefined, {
     maxRetries: 4,
