@@ -955,6 +955,25 @@ testDone(
   }
 );
 
+test("the default reconnection delay is random for each socket, from 1 to 5 seconds", () => {
+  vitest.spyOn(Math, "random").mockReturnValueOnce(0).mockReturnValueOnce(0.75);
+  const a = new ReconnectingWebSocket(URL, undefined, { startClosed: true });
+  const b = new ReconnectingWebSocket(URL, undefined, { startClosed: true });
+  // @ts-expect-error - accessing private field
+  a._retryCount = 1;
+  // @ts-expect-error - accessing private field
+  b._retryCount = 1;
+  // @ts-expect-error - accessing private method
+  expect(a._getNextDelay()).toBe(1000);
+  // @ts-expect-error - accessing private method
+  expect(b._getNextDelay()).toBe(4000);
+  // the random value is chosen once for each socket
+  // @ts-expect-error - accessing private field
+  a._retryCount = 2;
+  // @ts-expect-error - accessing private method
+  expect(a._getNextDelay()).toBe(1300);
+});
+
 testDone("reconnection delay grow factor", (done) => {
   const ws = new ReconnectingWebSocket(ERROR_URL, [], {
     minReconnectionDelay: 50,

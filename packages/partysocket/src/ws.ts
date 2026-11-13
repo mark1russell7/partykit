@@ -125,7 +125,6 @@ export type Options = {
 
 const DEFAULT = {
   maxReconnectionDelay: 10000,
-  minReconnectionDelay: 3000,
   minUptime: 5000,
   reconnectionDelayGrowFactor: 1.3,
   connectionTimeout: 4000,
@@ -158,6 +157,8 @@ export type Message =
 export default class ReconnectingWebSocket extends (EventTarget as TypedEventTarget<WebSocketEventMap>) {
   private _ws: WebSocket | undefined;
   private _retryCount = -1;
+  // the default minReconnectionDelay of this socket: see _getNextDelay()
+  private _defaultMinReconnectionDelay: number | undefined;
   private _uptimeTimeout: ReturnType<typeof setTimeout> | undefined;
   private _connectTimeout: ReturnType<typeof setTimeout> | undefined;
   private _shouldReconnect = true;
@@ -441,11 +442,17 @@ export default class ReconnectingWebSocket extends (EventTarget as TypedEventTar
   private _getNextDelay() {
     const {
       reconnectionDelayGrowFactor = DEFAULT.reconnectionDelayGrowFactor,
-      minReconnectionDelay = DEFAULT.minReconnectionDelay,
       maxReconnectionDelay = DEFAULT.maxReconnectionDelay
     } = this._options;
     let delay = 0;
     if (this._retryCount > 0) {
+      // The default is random for each socket (1 to 5 seconds), so that many
+      // clients do not all reconnect at the same moments. It is chosen here,
+      // not when the module is imported: some runtimes (Cloudflare Workers)
+      // do not allow random values in the global scope.
+      const minReconnectionDelay =
+        this._options.minReconnectionDelay ??
+        (this._defaultMinReconnectionDelay ??= 1000 + Math.random() * 4000);
       delay =
         minReconnectionDelay *
         reconnectionDelayGrowFactor ** (this._retryCount - 1);
