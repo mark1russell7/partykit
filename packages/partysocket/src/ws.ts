@@ -432,6 +432,22 @@ export default class ReconnectingWebSocket extends (EventTarget as TypedEventTar
     return queue;
   }
 
+  // Call an on* handler as EventTarget calls a listener: if it throws,
+  // report the error and go on, so the listeners added with
+  // addEventListener() still get the event.
+  private _callHandler<E>(handler: ((event: E) => void) | null, event: E) {
+    if (!handler) {
+      return;
+    }
+    try {
+      handler.call(this, event);
+    } catch (error) {
+      setTimeout(() => {
+        throw error;
+      }, 0);
+    }
+  }
+
   private _debug(...args: unknown[]) {
     if (this._options.debug) {
       this._debugLogger("RWS>", ...args);
@@ -634,18 +650,14 @@ const partysocket = new PartySocket({
     });
     this._messageQueue = [];
 
-    if (this.onopen) {
-      this.onopen(event);
-    }
+    this._callHandler(this.onopen, event);
     this.dispatchEvent(cloneEvent(event));
   };
 
   private _handleMessage = (event: MessageEvent) => {
     this._debug("message event");
 
-    if (this.onmessage) {
-      this.onmessage(event);
-    }
+    this._callHandler(this.onmessage, event);
     this.dispatchEvent(cloneEvent(event));
   };
 
@@ -656,9 +668,7 @@ const partysocket = new PartySocket({
       event.message === "TIMEOUT" ? "timeout" : undefined
     );
 
-    if (this.onerror) {
-      this.onerror(event);
-    }
+    this._callHandler(this.onerror, event);
     this._debug("exec error listeners");
     this.dispatchEvent(cloneEvent(event));
 
@@ -680,9 +690,7 @@ const partysocket = new PartySocket({
       this._connect();
     }
 
-    if (this.onclose) {
-      this.onclose(event);
-    }
+    this._callHandler(this.onclose, event);
     this.dispatchEvent(cloneEvent(event));
   };
 

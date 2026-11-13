@@ -1178,6 +1178,60 @@ test("close() while still CONNECTING dispatches its close event synchronously", 
   }
 });
 
+test("an on* handler that throws does not stop the listeners, and its error is reported", async () => {
+  vitest.useFakeTimers();
+  try {
+    let inner!: OpenWebSocket;
+    // opens after a tick, as a server that accepts the connection
+    class OpenWebSocket extends EventTarget {
+      readyState = 0;
+      binaryType = "blob";
+      constructor() {
+        super();
+        inner = this;
+        setTimeout(() => {
+          this.readyState = 1;
+          this.dispatchEvent(new Event("open"));
+        }, 0);
+      }
+      send() {}
+      close() {
+        this.readyState = 2;
+      }
+    }
+
+    const ws = new ReconnectingWebSocket(URL, undefined, {
+      WebSocket: OpenWebSocket
+    });
+    await vitest.advanceTimersByTimeAsync(10);
+    expect(ws.readyState).toBe(ws.OPEN);
+
+    let messages = 0;
+    ws.addEventListener("message", () => {
+      messages++;
+    });
+    ws.onmessage = () => {
+      throw new Error("bug in onmessage");
+    };
+    inner.dispatchEvent(new MessageEvent("message", { data: "m1" }));
+    expect(messages).toBe(1);
+    expect(() => vitest.runOnlyPendingTimers()).toThrow("bug in onmessage");
+
+    let closes = 0;
+    ws.addEventListener("close", () => {
+      closes++;
+    });
+    ws.onclose = () => {
+      throw new Error("bug in onclose");
+    };
+    ws.close();
+    expect(closes).toBe(1);
+    expect(() => vitest.runOnlyPendingTimers()).toThrow("bug in onclose");
+  } finally {
+    vitest.useRealTimers();
+  }
+});
+
 testDone(
   "close() inside a close listener does not dispatch a duplicate close event",
   (done, fail) => {
