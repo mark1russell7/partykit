@@ -183,6 +183,38 @@ test("URL provider", async () => {
   expect(() => ws._getNextUrl(() => 123)).toThrow();
 });
 
+testDone(
+  "a URL provider that rejects with undefined dispatches an error event and retries",
+  (done, fail) => {
+    let calls = 0;
+    const ws = new ReconnectingWebSocket(
+      () => {
+        calls++;
+        // for example `reject()` in a token fetcher
+        return calls === 1 ? Promise.reject(undefined) : Promise.resolve(URL);
+      },
+      undefined,
+      { minReconnectionDelay: 10, maxReconnectionDelay: 10 }
+    );
+    const errors: string[] = [];
+    ws.addEventListener("error", (event) => {
+      errors.push(event.message);
+    });
+
+    ws.addEventListener("open", () => {
+      try {
+        expect(calls).toBe(2);
+        expect(errors).toEqual([""]);
+      } catch (e) {
+        fail(e);
+        return;
+      }
+      ws.close();
+      done();
+    });
+  }
+);
+
 testDone("websocket protocol", (done) => {
   const anyProtocol = "foobar";
   const ws = new ReconnectingWebSocket(URL, anyProtocol);

@@ -584,7 +584,9 @@ const partysocket = new PartySocket({
       // via https://github.com/pladaria/reconnecting-websocket/pull/166
       .catch((err) => {
         this._connectLock = false;
-        this._handleError(new Events.ErrorEvent(Error(err.message), this));
+        // a URL or protocols provider can reject with any value, also
+        // undefined or null
+        this._handleError(new Events.ErrorEvent(Error(err?.message), this));
       });
   }
 
