@@ -8,7 +8,8 @@ import { WebSocketServer } from "ws";
 import PartySocket from "../index";
 import ReconnectingWebSocket from "../ws";
 
-const PORT = 50136;
+// integration.test.ts uses ports 50132-50136, and test files run in parallel
+const PORT = 50160;
 
 describe.skipIf(!!process.env.GITHUB_ACTIONS)(
   "Edge Cases - UUID Generation",
