@@ -434,31 +434,35 @@ describe.skipIf(!!process.env.GITHUB_ACTIONS)("usePartySocket", () => {
     );
   });
 
-  test("onError gets the message of the error", { timeout: 15000 }, async () => {
-    let message: string | undefined;
+  test(
+    "onError gets the message of the error",
+    { timeout: 15000 },
+    async () => {
+      let message: string | undefined;
 
-    const { result } = renderHook(() =>
-      usePartySocket({
-        host: `localhost:${PORT}`,
-        room: "test-room",
-        query: () => Promise.reject(new Error("no token")),
-        onError: (event) => {
-          message = event.message;
+      const { result } = renderHook(() =>
+        usePartySocket({
+          host: `localhost:${PORT}`,
+          room: "test-room",
+          query: () => Promise.reject(new Error("no token")),
+          onError: (event) => {
+            message = event.message;
+          },
+          maxRetries: 0,
+          ...FAST_RECONNECT
+        })
+      );
+
+      await waitFor(
+        () => {
+          expect(message).toBe("no token");
         },
-        maxRetries: 0,
-        ...FAST_RECONNECT
-      })
-    );
+        { timeout: 3000 }
+      );
 
-    await waitFor(
-      () => {
-        expect(message).toBe("no token");
-      },
-      { timeout: 3000 }
-    );
-
-    result.current.close();
-  });
+      result.current.close();
+    }
+  );
 
   test("attaches onError event handler", { timeout: 15000 }, async () => {
     const onError = vitest.fn();
